@@ -4,10 +4,10 @@ import 'package:daily_highlight/models/highlight.dart';
 import 'package:daily_highlight/services/storage_service.dart';
 
 class HighlightInput extends StatefulWidget {
-  const HighlightInput({Key? key}) : super(key: key);
+  const HighlightInput({super.key});
 
   @override
-  _HighlightInputState createState() => _HighlightInputState();
+  State<HighlightInput> createState() => _HighlightInputState();
 }
 
 class _HighlightInputState extends State<HighlightInput> {
@@ -23,38 +23,31 @@ class _HighlightInputState extends State<HighlightInput> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Form(
         key: _formKey,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
             TextFormField(
               controller: _controller,
-              maxLength: 140,
               maxLines: 3,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: "Today's highlight",
-                border: OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _submitHighlight,
-                ),
+                contentPadding: EdgeInsets.all(16),
               ),
               validator: (value) {
-                if (value == null || value.trim().isEmpty) {
+                if (value == null || value.isEmpty) {
                   return 'Please enter your highlight';
                 }
                 return null;
               },
             ),
-            const SizedBox(height: 8),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              onPressed: _submitHighlight,
-              child: const Text('Save Highlight'),
+              onPressed: _saveHighlight,
+              child: const Text('Save'),
             ),
           ],
         ),
@@ -62,28 +55,19 @@ class _HighlightInputState extends State<HighlightInput> {
     );
   }
 
-  Future<void> _submitHighlight() async {
+  Future<void> _saveHighlight() async {
     if (_formKey.currentState!.validate()) {
       final highlight = Highlight(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: _controller.text.trim(),
+        text: _controller.text,
         date: DateTime.now(),
       );
-
       await Provider.of<StorageService>(
         context,
         listen: false,
       ).saveHighlight(highlight);
-
+      Navigator.pop(context);
       _controller.clear();
-      FocusScope.of(context).unfocus();
-
-      // Refresh the list in parent widget
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Highlight saved!')));
-      }
     }
   }
 }

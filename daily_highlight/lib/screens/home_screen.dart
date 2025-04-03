@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:daily_highlight/models/highlight.dart';
 import 'package:daily_highlight/services/storage_service.dart';
-import 'package:daily_highlight/widgets/highlight_card.dart';
+// import 'package:daily_highlight/widgets/highlight_card.dart';
 import 'package:daily_highlight/widgets/highlight_input.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -13,6 +13,21 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late Future<List<Highlight>> _highlightsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshHighlights();
+  }
+
+  void _refreshHighlights() {
+    setState(() {
+      _highlightsFuture =
+          Provider.of<StorageService>(context, listen: false).getHighlights();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,36 +40,31 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<List<Highlight>>(
-        future: Provider.of<StorageService>(context).getHighlights(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final highlights = snapshot.data ?? [];
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: highlights.length,
-            itemBuilder: (context, index) {
-              final highlight = highlights[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
+      body: RefreshIndicator(
+        onRefresh: () async => _refreshHighlights(),
+        child: FutureBuilder<List<Highlight>>(
+          future: _highlightsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final highlights = snapshot.data ?? [];
+            return ListView.builder(
+              itemCount: highlights.length,
+              itemBuilder: (context, index) {
+                final highlight = highlights[index];
+                return ListTile(
                   title: Text(highlight.text),
-                  subtitle: Text(
-                    '${highlight.date.day}/${highlight.date.month}/${highlight.date.year}',
-                  ),
+                  subtitle: Text(highlight.date.toString()),
                   trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _deleteHighlight(context, highlight.id),
+                    icon: const Icon(Icons.delete),
+                    onPressed: () => _deleteHighlight(highlight.id),
                   ),
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -62,22 +72,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showAddDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      builder: (_) => const HighlightInput(),
       isScrollControlled: true,
-      builder:
-          (context) => Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: const HighlightInput(),
-          ),
     );
   }
 
-  Future<void> _deleteHighlight(BuildContext context, String id) async {
+  Future<void> _deleteHighlight(String id) async {
     await Provider.of<StorageService>(
       context,
       listen: false,
     ).deleteHighlight(id);
-    setState(() {}); // Refresh UI
+    _refreshHighlights();
   }
 }

@@ -1,15 +1,14 @@
-// handles local storage operation
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:daily_highlight/models/highlight.dart';
+import '../models/highlight.dart';
 
 class StorageService {
   static const _highlightsKey = 'highlights';
 
   Future<List<Highlight>> getHighlights() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getStringList(_highlightsKey) ?? [];
-    return jsonString
+    final jsonList = prefs.getStringList(_highlightsKey) ?? [];
+    return jsonList
         .map((json) => Highlight.fromJson(jsonDecode(json)))
         .toList();
   }
@@ -20,7 +19,7 @@ class StorageService {
     highlights.add(highlight);
     await prefs.setStringList(
       _highlightsKey,
-      highlights.map((h) => jsonEncode(h.toJSON())).toList(),
+      highlights.map((h) => jsonEncode(h.toJson())).toList(),
     );
   }
 
@@ -30,7 +29,7 @@ class StorageService {
     highlights.removeWhere((h) => h.id == id);
     await prefs.setStringList(
       _highlightsKey,
-      highlights.map((h) => jsonEncode(h.toJSON())).toList(),
+      highlights.map((h) => jsonEncode(h.toJson())).toList(),
     );
   }
 }
